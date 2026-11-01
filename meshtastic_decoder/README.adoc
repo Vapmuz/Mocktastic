@@ -1,0 +1,356 @@
+= Meshtastic Decoder Function Dictionary
+:toc:
+:sectnums:
+
+This document contains the functions and related types from the source dictionary. The initial compendium and build/Makefile summary have been omitted.
+The inventory below covers project-owned headers in this folder, including test support. Vendored mbedTLS, generated nanopb, and the vendored doctest headers are dependencies and are not expanded into this project API dictionary. `build_opt.h` is a build-configuration fragment and declares no functions.
+
+== Common utility functions (`functions.h` / `functions.cpp`)
+
+=== `SIZEDATA`
+Macro constant = 512.
+Used as the maximum buffer size for protobuf `MeshtasticData` encoding.
+
+=== `uint32_t timeDifference(uint32_t t1, uint32_t t2)`
+Compute elapsed time and handle counter wraparound.
+Returns `t2 - t1` if no wrap; otherwise computes the wrapped difference.
+
+=== `std::string stringClear(std::string s)`
+Insert dashes every 4 characters.
+Used to make raw LoRa message text easier to read.
+
+=== `std::string bufferToString(uint8_t* buffer, int size_buffer)`
+Convert a raw byte buffer to a lowercase hex string.
+
+=== `void hexStringToByte(const std::string& hex, std::vector<uint8_t>& v)`
+Parse an even-length hexadecimal string into a byte vector.
+
+=== `std::string vectorToHexString(std::vector<uint8_t> v)`
+Convert a byte vector to a hexadecimal string.
+
+=== `std::string b64StrToHexStr(std::string s)`
+Convert a Base64 string to a hexadecimal string.
+
+=== `void addValue(int val, std::vector<uint8_t>& v)`
+Append an integer value to a byte vector.
+
+=== `std::string isMessageValid(const std::string& s)`
+Validate that a string is non-empty, even-length hexadecimal; returns an empty string when valid and throws `std::invalid_argument` otherwise.
+
+=== `uint takeBits(uint8_t byte, int sx, int dx)`
+Extract a bit range from a byte.
+Validates indices and throws on invalid ranges.
+
+=== `uint32_t litEndiConverter(std::vector<uint8_t> v, int begin, int end)`
+Convert 4 bytes from a vector slice into a little-endian `uint32_t`.
+Throws if the slice is not exactly 4 bytes or if indexes are invalid.
+
+=== `void InPlaceLitEndiConverter(std::vector<uint8_t>& v, int begin, int end)`
+Reverse 4 bytes in a vector slice in place for little-endian conversion.
+
+=== `uint32_t litEndiConverter(uint8_t bf[], int len)`
+Convert 4 raw bytes to a little-endian `uint32_t`.
+Throws if `len != 4`.
+
+=== `std::string hexString32(uint32_t vaff)`
+Convert a 32-bit integer to a lowercase hex string.
+
+=== `std::vector<unsigned char> base64Decoder(const std::string& input)`
+Decode Base64 into bytes.
+Rejects invalid length, whitespace, and invalid characters.
+
+=== `std::string base64Encoder(const std::vector<unsigned char>& input)`
+Encode bytes as a Base64 string.
+
+=== `std::string vectorToString(std::vector<uint8_t>& v)`
+Convert a byte vector to a raw string by appending each byte.
+
+=== `void strLitEndiConverter(std::string s, uint8_t bf[4], int sz_bf)`
+Convert a 4-character hexadecimal string to a 4-byte little-endian buffer.
+
+=== `void randomBuffer(uint8_t bf[4], int sz_buffer)`
+Fill a 4-byte buffer with random bytes.
+
+=== `class Packet`
+Utility for packet building, parsing, and display.
+Fields: `size`, `rssi`, `is_complete`, `data`.
+
+=== `Packet::header`
+Packet header layout: `to`, `from`, `id`, `flags`, `channel`, `next_hop`, `relay_node`.
+
+=== `Packet::flags`
+Decoded header flags: `hop_limit`, `want_ack`, `via_mqtt`, `hop_start`.
+
+=== `void Packet::fillHeader(struct header* theHeader)`
+Copy the first 16 packet bytes into a header struct.
+
+=== `void Packet::fillFlags(struct flags* f)`
+Parse the flags byte at packet offset 12 into a flags struct.
+
+=== `void Packet::hexStringToData(const std::string& hex)`
+Parse hex string into packet `data` and set `size`.
+
+=== `std::string Packet::dataToString()`
+Convert packet `data` to a lowercase hex string.
+
+=== `void Packet::information(char* buffer)`
+Write a short summary (size, RSSI) into a C buffer.
+
+=== `std::string Packet::info()`
+Return a compact text summary including size and RSSI.
+
+=== `std::string Packet::makeStringHeader()`
+Return a multi-line header summary with packet fields, flags, and completeness.
+
+=== `std::string Packet::addName(std::string s)`
+Append known Meshtastic node names to certain IDs.
+
+=== `bool Packet::isComplete()`
+Return whether `data.size()` equals `size`.
+
+=== `std::string convertKeysToInfoPacket(std::string publ_key)`
+Convert a hexadecimal public key into the raw-byte string representation used in a NODEINFO packet.
+
+=== `void maskBitVector(std::vector<uint8_t>& v, int byte, int bit)`
+Toggle the selected bit in a byte vector.
+
+=== `uint8_t retrieveBitVector(std::vector<uint8_t> v, int byte, int bit)`
+Read the selected bit from a byte vector.
+
+=== `void removeWantAcknowledge(std::vector<uint8_t>& v)`
+Clear the want-acknowledge bit in a packet header.
+
+== Meshtastic protobuf and packet helpers (`meshtastic.h` / `meshtastic.cpp`)
+
+=== `struct MeshtasticUser`
+Wrapper for nanopb `meshtastic_User` with ID, names, public key, model, license, and role.
+
+=== `std::vector<uint8_t> encodeUser(const MeshtasticUser& user)`
+Encode a user object into protobuf bytes using nanopb callbacks.
+
+=== `std::optional<MeshtasticUser> decodeUser(const std::vector<uint8_t>& buffer)`
+Decode protobuf bytes into a `MeshtasticUser`.
+
+=== `struct MeshtasticData`
+Wrapper for nanopb `meshtastic_Data` containing port, payload, routing fields, and bitfield.
+
+=== `std::vector<uint8_t> encodeData(const MeshtasticData& data)`
+Encode Meshtastic data into protobuf bytes.
+
+=== `std::optional<MeshtasticData> decodeData(const std::vector<uint8_t>& buffer)`
+Decode protobuf bytes into `MeshtasticData`.
+
+=== `std::vector<uint8_t> decryptBroadcast(std::vector<uint8_t>& data, std::vector<uint8_t> pubblic_key)`
+Decrypt broadcast payload bytes using AES-CTR and header fields.
+
+=== `std::optional<MeshtasticData> readProto(std::vector<uint8_t> v)`
+Decode raw protobuf bytes into a `MeshtasticData` object.
+
+=== `std::vector<uint8_t> stringToPb(std::string s)`
+Encode a text message as a Meshtastic protobuf payload.
+
+=== `std::vector<uint8_t> encodePerson(std::string short_name = "1234", std::string publ_key = Config::Device.publicKey, std::string id = "!12341234", std::string long_name = "Device", bool is_licensed = false, uint32_t meshtastic_role = meshtastic_Config_DeviceConfig_Role_CLIENT, uint32_t meshtastic_hardware = meshtastic_HardwareModel_TBEAM)`
+Encode a Meshtastic user/NODEINFO protobuf payload with the supplied identity and device information.
+
+=== `std::vector<uint8_t> encodeMessageInfo(std::vector<uint8_t> raw_protobuf_bytes, uint8_t from[4], uint8_t id[4], std::string psk_key_public_channel = Config::PublicChannel.key, uint8_t hop_start = 0x03, uint8_t want_ack = 0x00, uint8_t receveid_with_mqtt = 0x00, uint8_t hop_limit = 0x03, uint8_t next_hop = 0x00, uint8_t relay_node = 0x00)`
+Encrypt a NODEINFO protobuf payload for the public channel and construct its packet header.
+
+=== `std::vector<uint8_t> makeHeaderDM(uint8_t to[4], uint8_t from[4], uint8_t id[4], uint8_t hop_start, uint8_t want_ack, uint8_t receveid_with_mqtt, uint8_t hop_limit, uint8_t next_hop, uint8_t relay_node)`
+Build a direct-message packet header with zero channel hash.
+
+=== `std::vector<uint8_t> makeHeaderBroadcast(std::vector<uint8_t> psk_key, std::string name_channel, uint8_t to[4], uint8_t from[4], uint8_t id[4], uint8_t hop_start, uint8_t want_ack, uint8_t receveid_with_mqtt, uint8_t hop_limit, uint8_t next_hop, uint8_t relay_node)`
+Build a broadcast packet header with channel hash derived from PSK and channel name.
+
+=== `std::vector<uint8_t> encodeMessageDM(const AesKey256& aesKey, std::string &message, uint8_t extra_nonce[4], uint8_t to[4], uint8_t from[4], uint8_t id[4], uint8_t hop_start, uint8_t want_ack, uint8_t received_with_mqtt, uint8_t hop_limit, uint8_t next_hop, uint8_t relay_node)`
+Encode and encrypt a direct message.
+Validates flags and size, protobuf-encodes the message, encrypts with AES-CCM, and assembles header+ciphertext+tag+nonce.
+
+=== `std::vector<uint8_t> encodeMessageBroadcast(std::vector<uint8_t> psk_key, std::string message, std::string name_channel, uint8_t to[4], uint8_t from[4], uint8_t id[4], uint8_t hop_start, uint8_t want_ack, uint8_t receveid_with_mqtt, uint8_t hop_limit, uint8_t next_hop, uint8_t relay_node)`
+Encode and encrypt a broadcast message.
+Validates flags and size, protobuf-encodes the message, encrypts with AES-CTR, builds the header, and concatenates header+payload.
+
+=== `std::vector<uint8_t> broadcastMessageSh(std::string psk_key, std::string name_channel, std::string msg, uint8_t id[4], uint8_t from[4], uint8_t hop_start = 0x03, uint8_t want_ack = 0x00, uint8_t received_with_mqtt = 0x00, uint8_t hop_limit = 0x03, uint8_t next_hop = 0x00, uint8_t relay_node = 0xfc)`
+Build and encrypt a broadcast packet from PSK, channel name, and payload.
+
+=== `std::vector<uint8_t> DMMessageSh(std::string priv_key, std::string publ_key, std::string &message, uint8_t extra_nonce[4], uint8_t to[4], uint8_t from[4], uint8_t id[4], uint8_t hop_start= 0x03, uint8_t want_ack = 0x00, uint8_t received_with_mqtt= 0x00, uint8_t hop_limit= 0x03, uint8_t next_hop= 0x00, uint8_t relay_node= 0x00)`
+Build and encrypt a direct message packet using Curve25519/AES-CCM with the provided nonce and node IDs.
+
+=== `std::string msgPayloadDM(std::vector<uint8_t> packet, std::string priv_key, std::string publ_key)`
+Decrypt a direct-message packet payload using the shared AES key.
+
+=== `std::string msgPayloadBroadcast(std::vector<uint8_t> packet, std::string key)`
+Decrypt a broadcast packet payload using a channel PSK.
+
+=== `uint8_t xorVector(std::vector<uint8_t> v)`
+XOR all bytes in a vector.
+
+=== `uint8_t channelHash(std::vector<uint8_t> psk_key, std::vector<uint8_t> name_channel)`
+Compute a one-byte channel hash by XORing PSK and channel-name bytes.
+
+=== `uint8_t channelHash(std::string psk_key,std::string name_channel)`
+Compute the same channel hash from string inputs.
+
+=== `std::optional<MeshtasticUser> decryptBroadcastUser(std::vector<uint8_t> packet)`
+Decrypt and decode the user information carried in a broadcast packet.
+
+== Crypto wrapper functions (`crypto.h` / `crypto.cpp`)
+
+=== `AesKey256`
+Alias for `std::array<uint8_t, 32>`.
+
+=== `X25519Key`
+Alias for `std::array<uint8_t, 32>`.
+
+=== `CcmTag`
+Alias for `std::array<uint8_t, 8>`.
+
+=== `struct X25519KeyPair`
+Holds the generated 32-byte private and public X25519 keys.
+
+=== `CcmCiphertext`
+Holds CCM ciphertext and tag.
+
+=== `X25519KeyPair generateX25519KeyPair()`
+Generate a random X25519 key pair with a clamped private key.
+
+=== `std::string sha256Hex(const std::string& input)`
+Compute SHA-256 and return lowercase hex.
+
+=== `AesKey256 sha256Raw(const uint8_t* input, size_t len)`
+Compute raw SHA-256 bytes.
+
+=== `X25519Key clampX25519PrivateKey(const X25519Key& privateKey)`
+Internal helper to clamp a raw Curve25519 private key.
+
+=== `std::vector<uint8_t> channelCryptCtr(const std::vector<uint8_t>& pskKey, uint32_t packetId, uint32_t fromNode, const std::vector<uint8_t>& data)`
+AES-CTR transform for broadcast payloads.
+
+=== `std::vector<uint8_t> payloadEncrypterBroadcast(std::vector<uint8_t> psk_key, uint8_t id[4], uint8_t from[4], std::vector<uint8_t> payload)`
+Encrypt or decrypt a broadcast payload using its PSK and packet header identifiers.
+
+=== `X25519Key x25519SharedSecret(const X25519Key& myPrivateKey, const X25519Key& peerPublicKey)`
+Compute Curve25519 shared secret with mbedtls.
+
+=== `AesKey256 deriveAesKey(const X25519Key& sharedSecret)`
+Derive AES key by hashing the shared secret.
+
+=== `CcmCiphertext ccmEncrypt(const AesKey256& aesKey, uint32_t packetId, uint32_t extraNonce, uint32_t fromNode, const std::vector<uint8_t>& plaintext)`
+Encrypt plaintext with AES-256-CCM and return ciphertext+tag.
+
+=== `std::optional<std::vector<uint8_t>> ccmDecrypt(const AesKey256& aesKey, uint32_t packetId, uint32_t extraNonce, uint32_t fromNode, const std::vector<uint8_t>& ciphertext, const CcmTag& tag)`
+Decrypt AES-CCM ciphertext and verify authentication.
+
+=== `X25519Key stringToShSecret(std::string priv_key_str, std::string publ_key_str)`
+Parse hex keys and compute X25519 shared secret.
+
+=== `std::vector<uint8_t> x25519KeyToVector(X25519Key key)`
+Convert an X25519 key array to a vector.
+
+=== `X25519Key stringToAesKey(std::string priv_key, std::string publ_key)`
+Derive an AES key from hex Curve25519 keys.
+
+=== `std::vector<uint8_t> decryptMessageDM(std::vector<uint8_t> message_data, X25519Key aes_key)`
+Decrypt a direct-message packet, parse footer, and verify CCM tag.
+
+The implementation also uses private helpers `writeLE32` and `ccmNonce` to serialize little-endian values and construct the AES-CCM nonce. They are not declared in `crypto.h`.
+
+== Sketch and shell helpers (`lora_shell.h`, `lora_shell.cpp`, `meshtastic_decoder.ino`)
+
+=== `int tst()`
+Test helper that encodes "hello", decodes it, computes SHA-256, and returns 42.
+
+=== `std::vector<uint8_t> publicMessage(std::string msg, uint8_t id[4], uint8_t from[4], std::string key, std::string name_channel)`
+Encrypt a message for the public channel using `broadcastMessageSh`.
+
+=== `std::vector<uint8_t> privateChannelMessage(std::string msg, uint8_t id[4], uint8_t from[4], std::string key, std::string name_channel)`
+Encrypt a message for a private broadcast channel.
+
+=== `std::vector<uint8_t> privateMessage(std::string priv_key, std::string publ_key, std::string msg, uint8_t extra_nonce[4], uint8_t to[4], uint8_t from[4], uint8_t id[4])`
+Encrypt a direct-message packet using the shared AES key.
+
+=== `std::string echo(std::string s)`
+Return the input string unchanged.
+
+=== `size_t countSpaces(std::string str)`
+Count spaces in a string.
+
+=== `std::string strAfterSpace(std::string s, size_t space_index)`
+Return the substring after the requested space index.
+
+=== `std::string strBetweenSpace(std::string s, size_t segment_index)`
+Return the requested zero-based space-delimited segment.
+
+=== `std::string help()`
+Return the shell command list for the serial console.
+
+=== `std::string findBroadcastKey(std::vector<uint8_t> packet)`
+Pick the right broadcast PSK based on packet channel hash.
+
+=== `std::string findDMKey(std::vector<uint8_t> packet)`
+Pick the right DM public key based on the sender ID.
+
+=== `std::string tryPrintPayload(std::vector<uint8_t> packet)`
+Attempt DM or broadcast payload decryption and return plaintext or error text.
+
+=== `void sprint(const std::string value)`
+Print a value to `Serial` without a newline.
+
+=== `void sprintln(const std::string value)`
+Print a string to `Serial` with a newline.
+
+=== `void radioTx(std::string packet)`
+Send a hex packet string over LoRa.
+
+=== `void radioRx()`
+Receive a LoRa packet and print packet info, RSSI, and payload.
+
+=== `void setup()`
+Arduino initialization for LED, serial, SPI, and LoRa.
+
+=== `void loop()`
+Main Arduino loop: read serial input, send packets, and listen for LoRa.
+
+=== `void greatSwitch(std::string str)`
+Shell dispatcher that parses commands and routes them to the correct action.
+
+=== `class Parser`
+Parse shell commands and return the matching `Values` enum value.
+
+=== `Parser::main(std::string& s)`
+Parse a command string, append a trailing space for tokenization, and retain the last command except when the command is `/r`.
+
+=== `Parser::printLastCommand()`
+Return the retained command string.
+
+=== `Parser::command(std::string msg)`
+Return the first space-delimited token from a command string.
+
+=== `enum Values`
+Command result values: `SH_DEFAULT`, `ECHO`, `PUB`, `CANTINE`, `ADMN`, `R`, `RSSI`, `PWR17`, `GAIN`, `DHT`, `SEND_KEY`, and `RAW`.
+
+The parser recognizes `/echo`, `/pub`, `/cantine`, `/admn`, `/r`, `/rssi`, `/pwr17`, `/gain`, `/dht`, `/send_key`, and `/raw`. `/help` and unrecognized commands map to `SH_DEFAULT`.
+
+== Configuration types (`keys.h`)
+
+=== `struct Channel`
+Stores a channel name and its hexadecimal key.
+
+=== `struct User`
+Stores a user name and hexadecimal public and private keys.
+
+=== `struct Friend`
+Stores a friend name and hexadecimal public key.
+
+=== `namespace Config`
+Defines `PublicChannel`, `PrivateChannel`, `Admn`, `Device`, and `Leo1` configuration values.
+
+== Test helpers (`test/test_functions.h`)
+
+=== `std::string toHex(const std::vector<uint8_t>& v)`
+Convert a byte vector to lowercase hexadecimal.
+
+=== `std::string toHex(const uint8_t* p, size_t n)`
+Convert a byte range to lowercase hexadecimal.
+
+=== `std::string toHex(uint32_t val)`
+Convert a 32-bit integer to eight lowercase hexadecimal digits.

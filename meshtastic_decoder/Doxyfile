@@ -1,0 +1,92 @@
+# Doxygen configuration for the meshtastic_decoder sketch.
+# Generated for doxygen 1.9.x. Build with: make doxygen
+
+PROJECT_NAME           = "meshtastic_decoder"
+PROJECT_BRIEF          = "Meshtastic LoRa sniffer and decoder for LilyGO T3"
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+# --- input -------------------------------------------------------------
+INPUT                  = .
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cpp *.h *.hpp *.ino
+
+# .ino sketches are C++; doxygen does not know that extension by default.
+EXTENSION_MAPPING      = ino=C++
+
+# Tests and vendored third-party code are not part of the documented API.
+EXCLUDE                = test \
+                         mbedtls \
+                         nanopb_meshtastic \
+                         docs
+EXCLUDE_PATTERNS       = */test/* \
+                         *_test.cpp \
+                         *_test.h \
+                         *.pb.h
+EXCLUDE_SYMLINKS       = YES
+
+# --- what gets documented ---------------------------------------------
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+OPTIMIZE_OUTPUT_FOR_C  = NO
+MARKDOWN_SUPPORT       = YES
+
+# --- source browsing ---------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+STRIP_CODE_COMMENTS    = NO
+VERBATIM_HEADERS       = YES
+
+# --- preprocessing -----------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = NO
+
+# --- output formats ----------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+SEARCHENGINE           = YES
+GENERATE_LATEX         = NO
+
+# --- diagrams ----------------------------------------------------------
+# Requires graphviz (brew install graphviz); `make doxygen` checks for it.
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 0
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_TRANSPARENT        = YES
+DOT_MULTI_TARGETS      = YES
+
+# Caller/callee graphs are the useful ones here: the code is mostly free
+# functions, so the class hierarchy graphs stay small anyway.
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+TEMPLATE_RELATIONS     = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+DIRECTORY_GRAPH        = YES
+GRAPHICAL_HIERARCHY    = YES
+
+# 0 = unlimited; the graphs here are small enough not to need truncation.
+DOT_GRAPH_MAX_NODES    = 100
+MAX_DOT_GRAPH_DEPTH    = 0
+DOT_CLEANUP            = YES
+
+# --- diagnostics -------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
