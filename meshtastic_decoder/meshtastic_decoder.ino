@@ -27,7 +27,7 @@
 #include "bootloader_random.h" // for true random RNG
 
 //define use_case, SENSOR or DECODER:
-#define SENSOR
+#define DECODER
 
 //define the pins used by the LORA antenna + board led
 #define LORA_SCK   5

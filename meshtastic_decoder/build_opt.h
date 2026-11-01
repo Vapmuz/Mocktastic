@@ -1,1 +1,1 @@
--I /Users/leonardo/lora_spy/lilygo/meshtastic_decoder/nanopb_meshtastic/src
+-I /Users/leonardo/programs/lilygo/Mocktastic/meshtastic_decoder/nanopb_meshtastic/src
