@@ -100,6 +100,8 @@ the Arduino Library Manager:
 * Adafruit Unified Sensor
 * DHT sensor library by Adafruit
 
+
+open `build_opt.h` and put your hard-coded filepath. It should result like this: "Hard/coded/path/.../Mocktastic/meshtastic_decoder/nanopb_meshtastic/src"
 === LoRa pins
 
 Check your board's specifications to identify the corresponding pins. The
