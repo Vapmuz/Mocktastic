@@ -65,8 +65,8 @@ point when extending the client.
 I used Python's `unittest` approach as a model for testing individual,
 predictable units of logic. The project keeps protocol and utility logic
 separate from hardware effects so it can be exercised on a development
-machine. The tests themselves are written in C++ with the lightweight doctest
-framework and compile with C++20 using the bundled
+machine. The tests themselves are written with the lightweight doctest
+framework and compile with bundled
 test dependencies.
 
 From `meshtastic_decoder`, run:
