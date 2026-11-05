@@ -18,7 +18,7 @@ and is intended to be adapted to other compatible ESP32/LoRa hardware.
 
 == Dependencies installed
 
-The project uses MBDTLS for the cryptographic part during the test phase and Nano-Protobuf as a lightweight protobuf encoder. 
+The project uses MBDTLS for the cryptographic part during the test phase and Nano-Protobuf as a lightweight protobuf encoder. The protobuf definition comes from the official Meshtastic build (see https://buf.build/meshtastic/protobufs/tree for more info).
 The tests are written using Doctest's lightweight C++ tests.
 
 == Repository layout
