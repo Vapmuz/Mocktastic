@@ -59,7 +59,7 @@ public channel name follows the preset.
 **Goal**: README explains the 433 MHz board, region and preset selection,
 the frequency table, and the power and duty cycle limits.
 **Success Criteria**: A new user can configure the board from the README.
-**Status**: In Progress
+**Status**: Complete
 
 ## Decisions
 
@@ -106,3 +106,22 @@ the frequency table, and the power and duty cycle limits.
 - **No duty cycle enforcement.** EU_433 allows 10% airtime. The firmware
   only sends when a person types a command or a `/dht` request arrives,
   so this fork documents the limit instead of tracking airtime.
+
+## Verification (2026-11-09)
+
+- Host tests: `make test` passes, 106 test cases (94 upstream, 12 new).
+- ESP32 build: DECODER and SENSOR modes compile for the T3 board with
+  PlatformIO, platform espressif32 5.2.0 (Arduino core 2.0.5),
+  `-std=gnu++17`, board `ttgo-lora32-v21`. The build ran from a copy of the
+  sketch outside the repo. No PlatformIO files are part of this fork.
+- The non-test `keys.h` resolves to EU_433, LongFast, slot 4,
+  433875000 Hz, 10 dBm.
+- Not yet verified: on-air reception and transmission against a real
+  433 MHz Meshtastic node.
+
+## Open items
+
+- `keys.h` still holds the upstream author's channel keys and node keys.
+  Replace them with your own before you transmit.
+- `build_opt.h` holds the upstream author's absolute path. Arduino IDE needs
+  your own path there.

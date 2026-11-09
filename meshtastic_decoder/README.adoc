@@ -304,6 +304,12 @@ Send a hex packet string over LoRa.
 === `void radioRx()`
 Receive a LoRa packet and print packet info, RSSI, and payload.
 
+=== `void setupRadio()`
+Start the LoRa radio with `Config::RadioRegion` and `Config::RadioPreset`. Compute the frequency from the public channel name, set TX power to the LoRa library default capped at the region limit, and print the settings. Halt if the config is bad or the radio does not start.
+
+=== `void setTxPowerCommand(const std::string &s)`
+Handle `/pwr17 <value>`: set TX power, capped at the region limit.
+
 === `void setup()`
 Arduino initialization for LED, serial, SPI, and LoRa.
 
@@ -342,7 +348,33 @@ Stores a user name and hexadecimal public and private keys.
 Stores a friend name and hexadecimal public key.
 
 === `namespace Config`
-Defines `PublicChannel`, `PrivateChannel`, `Admn`, `Device`, and `Leo1` configuration values.
+Defines `RadioRegion`, `RadioPreset`, `PublicChannel`, `PrivateChannel`, `Admn`, `Device`, and `Leo1` configuration values. Outside tests, the `PublicChannel` name is the preset name.
+
+== Radio regions and presets (`radio_config.h` / `radio_config.cpp`)
+
+=== `struct Region`
+Stores a Meshtastic region: name, band start and end in Hz, duty cycle limit in percent, and TX power limit in dBm.
+
+=== `struct ModemPreset`
+Stores a Meshtastic modem preset: firmware display name, spreading factor, bandwidth in Hz, and coding rate denominator.
+
+=== `namespace Regions`
+Defines `EU_433` and `EU_868`, copied from the Meshtastic firmware region table.
+
+=== `namespace Presets`
+Defines `SHORT_TURBO`, `SHORT_FAST`, `SHORT_SLOW`, `MEDIUM_FAST`, `MEDIUM_SLOW`, `LONG_TURBO`, `LONG_FAST`, `LONG_MODERATE`, and `LONG_SLOW`. `LONG_MODERATE` uses the firmware name `LongMod`.
+
+=== `uint32_t djb2Hash(const std::string &text)`
+Hash a string with djb2, the hash Meshtastic uses to pick a frequency slot.
+
+=== `uint32_t frequencySlot(const Region &region, const ModemPreset &preset, const std::string &primaryChannelName)`
+Return the zero-based default frequency slot: `djb2Hash(name) % slot count`. An empty name uses the preset name. Throws `std::invalid_argument` if the preset bandwidth does not fit the region.
+
+=== `uint32_t slotFrequencyHz(const Region &region, const ModemPreset &preset, uint32_t slot)`
+Return the centre frequency of a slot in Hz: band start + half the bandwidth + slot * bandwidth. Throws `std::invalid_argument` if the slot is outside the region.
+
+=== `int clampTxPower(int requestedDbm, const Region &region)`
+Return the requested TX power, or the region limit if the request is higher.
 
 == Test helpers (`test/test_functions.h`)
 

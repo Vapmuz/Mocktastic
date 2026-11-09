@@ -16,6 +16,26 @@ The firmware has two compile-time modes:
 The implementation targets the LilyGO T3 LoRa32 V1.6.1 (ESP32-PICO and SX1276)
 and is intended to be adapted to other compatible ESP32/LoRa hardware.
 
+=== This fork: 433 MHz board on EU_433
+
+This fork runs on the 433 MHz version of the LilyGO T3 V1.6.1, which has an
+SX1278 radio instead of the SX1276. The two chips share one register map, and
+the board uses the same pins. The SX1278 tunes 137-525 MHz only, so it cannot
+reach 868 MHz.
+
+What changes from upstream:
+
+* The region and modem preset are set in `keys.h`. The default is EU_433
+  LongFast, which is 433.875 MHz.
+* The firmware computes the frequency the same way as the Meshtastic firmware,
+  from the region, the preset, and the public channel name. Upstream
+  hard-codes 869.525 MHz.
+* TX power starts at the region limit (10 dBm on EU_433). Upstream uses the
+  LoRa library default of 17 dBm. `/pwr17` cannot go above the region limit.
+
+The 868 MHz board still works: set `Regions::EU_868` in `keys.h`.
+`IMPLEMENTATION_PLAN.md` records the decisions behind these changes.
+
 == Dependencies installed
 
 The project uses MBDTLS for the cryptographic part during the test phase and Nano-Protobuf as a lightweight protobuf encoder. The protobuf definition comes from the official Meshtastic build (see https://buf.build/meshtastic/protobufs/tree for more info).
@@ -48,7 +68,11 @@ selection.
 point when extending the client.
 
 |`meshtastic_decoder/keys.h`
-|Channel and node identity configuration.
+|Radio region and preset, channel, and node identity configuration.
+
+|`meshtastic_decoder/radio_config.h`, `radio_config.cpp`
+|Meshtastic regions and modem presets. Computes the frequency slot and caps
+TX power at the region limit.
 
 |`meshtastic_decoder/nanopb_meshtastic/`
 |Nanopb runtime and generated Meshtastic Protobuf definitions.
@@ -90,7 +114,11 @@ documentation is written to `meshtastic_decoder/docs/html/`.
 
 You need an ESP32 board and a Semtech SX1276-family LoRa radio. The SENSOR
 variant also requires a DHT22. The tested board is the LilyGO T3 LoRa32
-V1.6.1, which integrates the ESP32 and LoRa radio.
+V1.6.1, which integrates the ESP32 and LoRa radio. The 868/915 MHz version has
+an SX1276; the 433 MHz version has an SX1278.
+
+You also need at least one other Meshtastic node on the same region, preset,
+and channel. A 433 MHz board can only talk to other 433 MHz nodes.
 
 Install Arduino IDE, download or clone this repository, and open
 `meshtastic_decoder/meshtastic_decoder.ino`. Install these libraries through
@@ -105,11 +133,12 @@ open `build_opt.h` and put your hard-coded filepath. It should result like this:
 === LoRa pins
 
 Check your board's specifications to identify the corresponding pins. The
-following mapping is for the LilyGO T3 V1.6.1:
+following mapping is for the LilyGO T3 V1.6.1. The 433 MHz and 868 MHz
+versions use the same pins:
 
 [cols="2,1",options="header"]
 |===
-|SX1276 signal |LilyGO T3 V1.6.1 GPIO
+|SX1276/SX1278 signal |LilyGO T3 V1.6.1 GPIO
 
 |VCC |3.3 V
 |GND |GND
@@ -154,33 +183,68 @@ that your selected preset and frequency are supported in your region.
 |Long Range / Slow (deprecated) |Long Slow |0.18 kbps |12 / 4096 |4/8 |125 kHz |158.5 dB
 |===
 
-The sketch's default is EU Medium Fast, configured as follows:
+Set the region and preset at the top of the `Config` namespace in
+`meshtastic_decoder/keys.h`. This fork's default is EU_433 LongFast:
 
 [source,cpp]
 ----
-LoRa.begin(869525024);
-LoRa.setSpreadingFactor(9);
-LoRa.setSignalBandwidth(250E3);
-LoRa.setCodingRate4(5);
-LoRa.setSyncWord(0x2B);
-LoRa.setPreambleLength(16);
-LoRa.enableCrc();
+inline constexpr Region RadioRegion = Regions::EU_433;
+inline constexpr ModemPreset RadioPreset = Presets::LONG_FAST;
 ----
 
-Always verify local radio regulations before transmitting. In the Meshtastic
-documentation's *Overview* page, use *Radio Settings* and its *Frequency Slot
-Calculator* to select a channel and slot and determine the corresponding
-frequency. Use that frequency in the sketch and make sure it matches the
-other nodes.
+`Regions` holds `EU_433` and `EU_868`. `Presets` holds every preset in the
+table above, for example `Presets::MEDIUM_FAST`. Both must match your other
+Meshtastic nodes.
+
+At startup, `setupRadio()` computes the frequency the same way as the
+Meshtastic firmware. It hashes the public channel name and picks one of the
+region's frequency slots. It then prints the result on the serial console:
+
+----
+LoRa: region EU_433, preset LongFast, channel LongFast, slot 4, 433875000 Hz, 10 dBm
+Region duty cycle limit: 10% airtime
+----
+
+Check that your other node uses the same region, preset, and primary channel
+name in the Meshtastic app. If it sets a frequency slot or frequency override
+by hand, set `PublicChannel` or the region to match, or clear the override.
+
+EU_433 spans 433.0-434.0 MHz. With the default channel name, the presets land
+on these frequencies:
+
+[cols="2,1,1",options="header"]
+|===
+|Preset |Slot |Frequency
+
+|LongFast |4 |433.875 MHz
+|MediumFast |1 |433.125 MHz
+|MediumSlow |4 |433.875 MHz
+|ShortFast |4 |433.875 MHz
+|ShortSlow |3 |433.625 MHz
+|LongModerate |6 |433.6875 MHz
+|LongSlow |3 |433.3125 MHz
+|ShortTurbo |2 |433.750 MHz
+|LongTurbo |2 |433.750 MHz
+|===
+
+Always verify local radio regulations before transmitting. In the EU, the
+433 MHz band is 433.05-434.79 MHz, with 10 mW ERP and 10% duty cycle. The
+firmware caps TX power at the region limit (10 dBm on EU_433). It does not
+track airtime, so keep your sending rate low. MediumFast on EU_433 lands on
+433.125 MHz, and its 250 kHz bandwidth reaches below 433.05 MHz. This fork
+uses LongFast for that reason.
 
 === Configure `keys.h`
 
 Before compiling, configure `PublicChannel`, `PrivateChannel`, `Admn`, and
 `Device` in `meshtastic_decoder/keys.h`:
 
-* For `PublicChannel`, enter the name and key of the public channel used at the
-  selected frequency. The channel name corresponds to the radio preset (for
-  example, `MediumFast`).
+* Set `RadioRegion` and `RadioPreset` as described in "Regional radio
+  presets".
+* For `PublicChannel`, enter the name and key of the public channel. By
+  default the name follows the preset (for example, `LongFast`). The name
+  also picks the frequency, so if your primary channel has its own name, enter
+  that name here.
 * For `PrivateChannel`, enter the name and key of the private channel used for
   messages.
 * For `Admn`, enter the name or node ID and public key of the main node from
@@ -232,7 +296,7 @@ monitor at 115200 baud. Its commands are:
 |`/admn <text>` |Send a private direct message to ADMIN.
 |`/r` |Repeat the previous command.
 |`/rssi` |Show the current LoRa RSSI.
-|`/pwr17 <value>` |Set LoRa transmit power.
+|`/pwr17 <value>` |Set LoRa transmit power in dBm, capped at the region limit.
 |`/gain <value>` |Set LoRa gain.
 |`/help` |Show the command help.
 |`/send_key` |Start direct messaging by sending this node's public key.
