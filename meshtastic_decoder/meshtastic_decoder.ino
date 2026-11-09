@@ -21,6 +21,7 @@
 #include <SPI.h>
 #include <LoRa.h>
 #include "functions.h"
+#include "radio_config.h"
 //-------------
 
 // see https://medium.com/@androidcrypto/esp32-how-to-generate-true-random-numbers-true-rng-951fcda58e9b
@@ -38,6 +39,10 @@
 #define LORA_DIO0  26
 
 #define BOARD_LED 25
+
+// TX power the LoRa library uses by default. setupRadio() caps it at the
+// region limit from keys.h (10 dBm on EU_433).
+#define LORA_DEFAULT_TX_POWER_DBM 17
 
 
 
@@ -151,6 +156,66 @@ void serialRadioRx() {
     Serial.println("time spent waiting for the packet in microseconds:" + String(timeDifference(t1, t2)) + " received at: " + String(time_milliseconds) + " (milliseconds)");
     sprintln("---");
 
+  }
+}
+
+/**
+ * Start the LoRa radio with the region and preset from keys.h.
+ *
+ * The public channel name picks the frequency slot, the same way the
+ * Meshtastic firmware does it. TX power starts at the LoRa library default,
+ * capped at the region limit. Halts if the config is bad or the radio does
+ * not start.
+ */
+void setupRadio() {
+  const Region &region = Config::RadioRegion;
+  const ModemPreset &preset = Config::RadioPreset;
+
+  uint32_t slot = 0;
+  uint32_t frequency = 0;
+  try {
+    slot = frequencySlot(region, preset, Config::PublicChannel.name);
+    frequency = slotFrequencyHz(region, preset, slot);
+  } catch (const std::exception &e) {
+    sprintln("Bad radio config in keys.h:");
+    sprintln(e.what());
+    while (1);
+  }
+
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed!");
+    while (1);
+  }
+  //preset for Meshtastic
+  LoRa.setSpreadingFactor(preset.spreadingFactor);
+  LoRa.setSignalBandwidth(preset.bandwidthHz);
+  LoRa.setCodingRate4(preset.codingRateDenominator);
+  LoRa.setSyncWord(0x2B);
+  LoRa.setPreambleLength(16);
+  LoRa.enableCrc();
+
+  int txPower = clampTxPower(LORA_DEFAULT_TX_POWER_DBM, region);
+  LoRa.setTxPower(txPower);
+
+  // slot + 1 because the Meshtastic app shows frequency slots one-based
+  Serial.printf("LoRa: region %s, preset %s, channel %s, slot %u, %u Hz, %d dBm\n",
+                region.name, preset.name, Config::PublicChannel.name.c_str(),
+                (unsigned)(slot + 1), (unsigned)frequency, txPower);
+  Serial.printf("Region duty cycle limit: %u%% airtime\n", (unsigned)region.dutyCyclePercent);
+}
+
+/**
+ * Handle "/pwr17 <value>": set TX power, capped at the region limit.
+ */
+void setTxPowerCommand(const std::string &s) {
+  int requested = std::stoi(strBetweenSpace(s, 1));
+  int value = clampTxPower(requested, Config::RadioRegion);
+  LoRa.setTxPower(value);
+  sprintln("set power " + std::to_string(value) + " dBm");
+  if (value != requested) {
+    sprintln(std::string("capped at the ") + Config::RadioRegion.name + " limit");
   }
 }
 
@@ -279,10 +344,7 @@ void switchSensor(std::string str){
     }
     case PWR17:{
     //control power of Tx transmission, take second argument as new value of transmission
-      std::string nr_s = strBetweenSpace(s,1);
-      int value= std::stoi(nr_s);
-      LoRa.setTxPower(value);
-      sprintln("set power " + nr_s);
+      setTxPowerCommand(s);
       break;
     }
     case GAIN:{
@@ -345,20 +407,7 @@ void setup() {
   Serial.println(sensor.name);
   uint32_t delayMS = sensor.min_delay / 1000;
 
-  //set up LoRa
-  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
-if (!LoRa.begin(869525024)) { //this frequency was created usign Meshtastic-lite's advice
-    Serial.println("LoRa init failed!");
-    while (1);
-  }
-  //preset for Meshtastic
-  LoRa.setSpreadingFactor(9);
-  LoRa.setSignalBandwidth(250E3);
-  LoRa.setCodingRate4(5);
-  LoRa.setSyncWord(0x2B);
-  LoRa.setPreambleLength(16);
-  LoRa.enableCrc();
+  setupRadio();
 
   sprintln("compila con cpp:");
   Serial.println(__cplusplus);
@@ -497,10 +546,7 @@ void switchDecoder(std::string str){
     }
     case PWR17:{
     //control power of Tx transmission, take second argument as new value of transmission
-      std::string nr_s = strBetweenSpace(s,1);
-      int value= std::stoi(nr_s);
-      LoRa.setTxPower(value);
-      sprintln("set power " + nr_s);
+      setTxPowerCommand(s);
       break;
     }
     case GAIN:{
@@ -543,23 +589,10 @@ bootloader_random_enable();
 
   digitalWrite(25, HIGH);
 
-  //turn on the serial communication 
+  //turn on the serial communication
   Serial.begin(115200);
 
-  //set up LoRa
-  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
-  if (!LoRa.begin(869525024)) { //this frequency was created usign Meshtastic-lite's advice
-    Serial.println("LoRa init failed!");
-    while (1);
-  }
-  //preset for Meshtastic
-  LoRa.setSpreadingFactor(9);
-  LoRa.setSignalBandwidth(250E3);
-  LoRa.setCodingRate4(5);
-  LoRa.setSyncWord(0x2B);
-  LoRa.setPreambleLength(16);
-  LoRa.enableCrc();
+  setupRadio();
 
   sprintln("compila con cpp:");
   Serial.println(__cplusplus);

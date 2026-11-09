@@ -5,6 +5,8 @@
 
 #include <string>
 
+#include "radio_config.h"
+
 /**
  * Configuration constants for Meshtastic channel and user keys.
  *
@@ -40,10 +42,31 @@ struct Friend{
 
 namespace Config
 {
+    /**
+     * Radio region and modem preset. Both must match your other Meshtastic
+     * nodes. The 433 MHz board (SX1278) can only use Regions::EU_433; the
+     * 868 MHz board (SX1276) uses Regions::EU_868.
+     */
+    inline constexpr Region RadioRegion = Regions::EU_868;
+    inline constexpr ModemPreset RadioPreset = Presets::MEDIUM_FAST;
+
+    #ifdef TESTS
+    //TEST ONLY: the test packets were recorded on the MediumFast channel.
     inline const Channel PublicChannel{
         "MediumFast",
         "d4f1bb3a20290759f0bcffabcf4e6901"
     };
+    #else
+    /**
+     * The default public channel is named after the preset. Its name also
+     * picks the radio frequency, so a custom name must match the primary
+     * channel name on your other nodes.
+     */
+    inline const Channel PublicChannel{
+        RadioPreset.name,
+        "d4f1bb3a20290759f0bcffabcf4e6901"
+    };
+    #endif
 
     inline const Channel PrivateChannel{
         "temp_sal",

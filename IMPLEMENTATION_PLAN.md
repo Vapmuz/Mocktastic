@@ -46,14 +46,14 @@ TX power at the region limit.
 `/pwr17` caps the value at the region limit.
 **Success Criteria**: DECODER and SENSOR builds compile for the T3 board.
 **Tests**: ESP32 compile of both modes (PlatformIO, espressif32 5.2.0).
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 3: EU_433 LongFast default
 **Goal**: `keys.h` selects `Regions::EU_433` and `Presets::LONG_FAST`, and the
 public channel name follows the preset.
 **Success Criteria**: All existing host tests still pass.
 **Tests**: `make test`.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 4: Documentation
 **Goal**: README explains the 433 MHz board, region and preset selection,
