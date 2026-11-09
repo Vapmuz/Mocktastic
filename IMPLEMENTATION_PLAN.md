@@ -53,13 +53,13 @@ TX power at the region limit.
 public channel name follows the preset.
 **Success Criteria**: All existing host tests still pass.
 **Tests**: `make test`.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 4: Documentation
 **Goal**: README explains the 433 MHz board, region and preset selection,
 the frequency table, and the power and duty cycle limits.
 **Success Criteria**: A new user can configure the board from the README.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Decisions
 

@@ -47,8 +47,8 @@ namespace Config
      * nodes. The 433 MHz board (SX1278) can only use Regions::EU_433; the
      * 868 MHz board (SX1276) uses Regions::EU_868.
      */
-    inline constexpr Region RadioRegion = Regions::EU_868;
-    inline constexpr ModemPreset RadioPreset = Presets::MEDIUM_FAST;
+    inline constexpr Region RadioRegion = Regions::EU_433;
+    inline constexpr ModemPreset RadioPreset = Presets::LONG_FAST;
 
     #ifdef TESTS
     //TEST ONLY: the test packets were recorded on the MediumFast channel.
