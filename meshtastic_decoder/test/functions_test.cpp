@@ -10,6 +10,7 @@
 #include "crypto_test.cpp"
 #include "meshtastic_test.cpp"
 #include "lora_shell_test.cpp"
+#include "radio_config_test.cpp"
 
 
 TEST_CASE("Prova Packet") {
